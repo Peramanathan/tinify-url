@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Tinify</title>
+</head>
+<body>
+    <div id="longUrl">
+	    <form action="/" method="post">
+		  <input type="text" name="longUrl" placeholder="paste your long url" id="longUrlBox">
+		  <input type="submit" value="tinify">
+		</form>	    	
+    </div>
+    <div id="shortUrl">
+	    {% if tiny_url %}
+		  <h1>Tinified URL: <a href="{{ tiny_url }}">{{ tiny_url }}</a>  </h1>
+		{% else %}
+		  <h1></h1>
+		{% endif %}
+    </div>
+</body>
+</html>
+
