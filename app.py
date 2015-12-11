@@ -3,7 +3,6 @@
 
 import os
 import re
-import marisa_trie
 import sqlite3
 from datetime import datetime
 from random import seed, choice, uniform, randint, sample
@@ -22,72 +21,93 @@ DEBUG = True
 SECRET_KEY = os.urandom(24)
 
 # Queries
-FECTH_ASSIGNED_VAL_QUERY = "select v from wordlist where k= ?"
-FETCH_ALL_UNASSIGNED_KEYS = "select k from wordlist where v='not assigned'"
+FECTH_ASSIGNED_VAL = "SELECT v FROM wordlist WHERE k= ?"
+FETCH_ALL_UNASSIGNED_KEYS = "SELECT k FROM wordlist WHERE v='not assigned'"
+ROWS_UNASSIGNED = "SELECT count(*) FROM wordlist WHERE v='not assigned'"
+UPDATE_KEY_VALS = "INSERT OR REPLACE INTO wordlist (k, v) VALUES (?,?)"
+
+# Semantic variables
+FIRST_ROW = FIRST_COL = 0
 
 app = Flask(__name__)
 app.config.from_object(__name__)
 
 
 def connect_db():
-    conn = sqlite3.connect(app.config['DATABASE'])
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def init_db():
-    with closing(connect_db()) as db:
-        with app.open_resource('schema.sql', mode='r') as f:
-            db.cursor().executescript(f.read())
-        db.commit()
+    """Connects to the specific database."""
+    rv = sqlite3.connect(app.config['DATABASE'])
+    rv.row_factory = sqlite3.Row
+    return rv
 
 
 def get_db():
-    """Opens a new database connection if there is none
+    """Opens a new database connection if there is none yet
     """
     if not hasattr(g, 'sqlite_db'):
         g.sqlite_db = connect_db()
     return g.sqlite_db
 
 
+@app.teardown_appcontext
+def close_db(error):
+    """Closes the database at the end of the request."""
+    if hasattr(g, 'sqlite_db'):
+        g.sqlite_db.close()
+
+
 def query_db(query, args=(), one=False):
-    cur = g.db.execute(query, args)
+    db = get_db()
+    cur = db.execute(query, args)
     rv = cur.fetchall()
     cur.close()
     return (rv[0] if rv else None) if one else rv
 
 
-def is_contain(word):
+def update_db(query, args=()):
+    db = get_db()
+    db.execute(query, args)
+    db.commit()
 
-    # query = "select v from wordlist where k= '" + word + "';"
-    # query = "select v from wordlist where k= ?"
-    cur = query_db(FECTH_ASSIGNED_VAL_QUERY, [word])
+
+def is_key_assigned(word):
+
+    cur = query_db(FECTH_ASSIGNED_VAL, [word])
 
     try:
         assigned_value = cur[0][0] if cur else None
         if assigned_value == 'not assigned':
-            return True
+            return False
         elif assigned_value is None:
-            return False
+            return True
         elif len(assigned_value) > 0:  # key is assigned already
-            return False
+            return True
     except Exception, e:
         app.logger.error(e)
 
     return False
 
 
-def find_keyword(keywords):
+def find_and_update_keyword(keywords, long_url):
 
     for keyword in keywords:
         app.logger.info(keyword)
-        if is_contain(keyword):
+        if not is_key_assigned(keyword):
+            update_db(UPDATE_KEY_VALS, [keyword, long_url])
             return keyword
 
     try:
         # Checking if all keys are assigned
-        cur = query_db(FETCH_ALL_UNASSIGNED_KEYS)
-        random_keyword = cur[0][0]
+        cur = query_db(ROWS_UNASSIGNED)
+        nr_rows = cur[FIRST_ROW][FIRST_COL] if cur else 0
+        app.logger.info(nr_rows)
+        if not nr_rows:
+            pass  # have to reassign the oldest key
+
+        random_index = randint(1, nr_rows)
+        keyword_cur = query_db(FETCH_ALL_UNASSIGNED_KEYS)
+        random_keyword = keyword_cur[random_index][0]
+        update_db(UPDATE_KEY_VALS, [random_keyword, long_url])
+
         return random_keyword
     except Exception, e:
         app.logger.error(e)
@@ -103,21 +123,10 @@ def tinify_url(long_url):
     keywords = keywords_in_domain + keywords_in_path
     keywords = filter(None, keywords)
 
-    keyword = find_keyword(sorted(keywords))
+    keyword = find_and_update_keyword(sorted(keywords), long_url)
+    app.logger.info(keyword)
 
     return "http://myurlshortner.com/" + keyword
-
-
-@app.before_request
-def before_request():
-    g.db = get_db()
-
-
-@app.teardown_request
-def teardown_request(exception):
-    db = getattr(g, 'db', None)
-    if db is not None:
-        db.close()
 
 
 @app.route("/", methods=['GET', 'POST'])
@@ -132,11 +141,13 @@ def index():
 
 @app.route("/<word>", methods=['GET'])
 def redirect_to_external(word):
-    external_url = query_db(FECTH_ASSIGNED_VAL_QUERY, [word])
+    cur = query_db(FECTH_ASSIGNED_VAL, [word])
+    external_url = cur[FIRST_ROW][FIRST_COL] if cur else None
     app.logger.info(external_url)
-    if external_url != 'not assigned' or external_url is None:
-        external_url = "http:google.com"
-    return redirect(external_url)
+    if external_url is None or external_url == 'not assigned':
+        external_url = "http://fyndiq.se"
+
+    return redirect(external_url, code=302)
 
 
 if __name__ == "__main__":
