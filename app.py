@@ -64,6 +64,7 @@ def query_db(query, args=(), one=False):
 
 
 def update_db(query, args=()):
+    app.logger.info("updating db: KEY/VALS: " + str(args))
     db = get_db()
     db.execute(query, args)
     db.commit()
@@ -87,13 +88,47 @@ def is_key_assigned(word):
     return False
 
 
+def has_prefix_keyword(prefix):
+    app.logger.info(prefix)
+    if len(prefix) == 0:
+        return None
+    elif not is_key_assigned(prefix):
+        return prefix
+    else:
+        has_prefix_keyword(prefix[:-1])
+
+
+def has_suffix_keyword(suffix):
+    app.logger.info(suffix)
+    if len(suffix) == 0:
+        return None
+    elif not is_key_assigned(suffix):
+        return suffix
+    else:
+        has_suffix_keyword(suffix[1:])
+
+
 def find_and_update_keyword(keywords, long_url):
 
+    # High probability for url to contain  english words
     for keyword in keywords:
         app.logger.info(keyword)
         if not is_key_assigned(keyword):
             update_db(UPDATE_KEY_VALS, [keyword, long_url])
             return keyword
+
+        prefix = keyword[:-1]
+        prefix_keyword = has_prefix_keyword(prefix)
+        app.logger.info(prefix_keyword)
+        if prefix_keyword:
+            update_db(UPDATE_KEY_VALS, [prefix_keyword, long_url])
+            return prefix_keyword
+
+        suffix = keyword[1:]
+        suffix_keyword = has_suffix_keyword(suffix)
+        if suffix_keyword:
+            update_db(UPDATE_KEY_VALS, [suffix_keyword, long_url])
+            return suffix_keyword
 
     try:
         # Checking if all keys are assigned
@@ -115,14 +150,19 @@ def find_and_update_keyword(keywords, long_url):
     return None  # pick oldest assigned key
 
 
+def regex_url_cleaner(url_string):
+    # words = re.split('/|\-|\?|\=|\_|\&|\+|\%| ', url_string)
+    words = re.split('\W+|\_', url_string)  # As unicode set it ignore _
+    words = map(lambda x: x.lower(), words)
+    return filter(None, words)
+
+
 def tinify_url(long_url):
     keywords = []
     parsed_url = urlparse(long_url.strip())
-    keywords_in_domain = parsed_url.netloc.split('.')  # netloc: techcrunch.com
-    keywords_in_path = re.split('/|\-', parsed_url.path)  # path:/lawsuit/
-    keywords = keywords_in_domain + keywords_in_path
-    keywords = filter(None, keywords)
-
+    for ustr in parsed_url:
+        keywords += regex_url_cleaner(ustr)
+    app.logger.info(keywords)
     keyword = find_and_update_keyword(sorted(keywords), long_url)
     app.logger.info(keyword)
 
