@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""This small app does find a tinified url for the given long url"""
 
 import os
 import re
@@ -61,6 +62,7 @@ def init_db():
 
 
 def query_db(query, args=(), one=False):
+    """ Select rows for the given query """
     db = get_db()
     cur = db.execute(query, args)
     rv = cur.fetchall()
@@ -69,6 +71,7 @@ def query_db(query, args=(), one=False):
 
 
 def update_db(query, args=()):
+    """ Update the rows for the given query """
     app.logger.info("updating db: KEY/VALS: " + str(args))
     db = get_db()
     db.execute(query, args)
@@ -83,9 +86,8 @@ def close_db(error):
 
 
 def is_key_assigned(word):
-
+    """For the given word it checks if the word is already assigned a url"""
     cur = query_db(ASSIGNED_VAL_QUERY, [word])
-
     try:
         assigned_value = cur[0][0] if cur else None
         if assigned_value == 'not assigned':
@@ -101,6 +103,9 @@ def is_key_assigned(word):
 
 
 def has_prefix_keyword(prefix):
+    """ Recursively search if any of prefixes of prefix(word) including
+        itself is already assigned a url
+    """
     if len(prefix) == 0:
         return None
     elif not is_key_assigned(prefix):
@@ -110,6 +115,9 @@ def has_prefix_keyword(prefix):
 
 
 def has_suffix_keyword(suffix):
+    """ Recursively search if any of prefixes of prefix(word) including
+        itself is already assigned a url
+    """
     if len(suffix) == 0:
         return None
     elif not is_key_assigned(suffix):
@@ -119,7 +127,9 @@ def has_suffix_keyword(suffix):
 
 
 def find_and_update_keyword(keywords, long_url):   # O(len(parsed_url))
-
+    """ For the given list of words in the parsed url it will find a keyword
+        and update the url against correct keyword in database
+    """
     for keyword in keywords:
 
         if not is_key_assigned(keyword):
@@ -164,16 +174,22 @@ def find_and_update_keyword(keywords, long_url):   # O(len(parsed_url))
     except Exception, e:
         app.logger.error(e)
 
-    return None  # pick oldest assigned key
+    return None
 
 
 def regex_url_cleaner(url_string):
+    """ Cleans the url removes non alphanumeric chars and _ and makes all the words
+        into lowercase
+    """
     words = re.split('\W+|\_', url_string)  # As unicode set it ignore _
     words = map(lambda x: x.lower(), words)
     return filter(None, words)
 
 
 def tinify_url(long_url):
+    """For the given full length url it retruns tinified url for
+       following specific scheme
+    """
     keywords = []
     parsed_url = urlparse(long_url.strip())
     for ustr in parsed_url:
@@ -186,6 +202,7 @@ def tinify_url(long_url):
 
 @app.route("/", methods=['GET', 'POST'])
 def index():
+    """Index page"""
     urls = None
     if request.method == 'POST':
         full_url = request.form['longUrl']
@@ -196,6 +213,7 @@ def index():
 
 @app.route("/<word>", methods=['GET'])
 def redirect_to_external(word):
+    """Redirction page"""
     cur = query_db(ASSIGNED_VAL_QUERY, [word])
     external_url = cur[FIRST_ROW][FIRST_COL] if cur else None
     app.logger.info(external_url)
