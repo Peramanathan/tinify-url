@@ -30,10 +30,15 @@ it quickly, so please pay attention to detail and corner cases.
 10. Visit `http://myurlshortener.com/<word>` you will be redirected to the url
 you just feed, in case if you run this in development environment visit `http://localhost:5000/<word>`
 
+
+### Running the test
+
+- Simply run : `python tinify_tests.py`
+
 ### TODO list
 
 - [] Adopt ORM for database models (tables)
 - [] Refactor, simplify, divide into mulitiple files
 - [] Cleaned and simple tests file
 - [] Frontpage aesthification
-- [] More test cases
+- [x] More test cases

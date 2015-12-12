@@ -115,7 +115,7 @@ def has_prefix_keyword(prefix):
 
 
 def has_suffix_keyword(suffix):
-    """ Recursively search if any of prefixes of prefix(word) including
+    """ Recursively search if any of suffixes of suffix(word) including
         itself is already assigned a url
     """
     if len(suffix) == 0:
@@ -157,16 +157,17 @@ def find_and_update_keyword(keywords, long_url):   # O(len(parsed_url))
         # Checking if all keys are assigned
         cur = query_db(ROWS_UNASSIGNED_QUERY)
         nr_rows = cur[FIRST_ROW][FIRST_COL] if cur else 0
-        app.logger.info(nr_rows)
+        app.logger.info("# Unassinged keys: " + str(nr_rows))
         if not nr_rows:
             oldest_key_cur = query_db(OLDEST_KEY_QUERY)
             oldest_key = oldest_key_cur[FIRST_ROW][FIRST_COL]
             update_db(REPLACE_OLDEST_KEY_QUERY, long_url, datetime.now())
             return oldest_key
 
-        random_index = randint(1, nr_rows)
+        random_index = randint(0, nr_rows - 1)
         keyword_cur = query_db(ALL_UNASSIGNED_KEYS_QUERY)
         random_keyword = keyword_cur[random_index][0]
+        app.logger.info(random_keyword)
         update_db(ASSIGN_KEYVALS_QUERY,
                   [random_keyword, long_url, datetime.now()])
 
