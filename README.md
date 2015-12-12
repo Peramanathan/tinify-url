@@ -22,7 +22,7 @@ it quickly, so please pay attention to detail and corner cases.
 3. `virtualenv tinyurl-env`   [`sudo pip install virtualenv` if virtualenv not installed before]
 4. `source tinyurl-env/bin/activate`
 5. `pip install -r requirements.txt`  [one time only]
-6. `python app.py`
+6. `python tinify.py`
 7. Open `localhost:5000` in browser
 8. Feed your url such as `techcrunch.com/2015/11/10/gmail-we-need-to-talk/?ncid=rss&utm_source=feedburner&utm_medium=feed&utm_campaign=Feed%3A+Techcrunch+%28TechCrunch%29&utm_content=FaceBook&sr_share=facebook` 
 9. You will get `http://myurlshortener.com/<word>` where `word` in 
@@ -36,3 +36,4 @@ you just feed, in case if you run this in development environment visit `http://
 - [] Refactor, simplify, divide into mulitiple files
 - [] Cleaned and simple tests file
 - [] Frontpage aesthification
+- [] More test cases
