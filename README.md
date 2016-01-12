@@ -1,6 +1,8 @@
 # Tinify
 For the given url it will tinify the url and return the tinified url
 
+[![Build Status](https://drone.io/github.com/Peramanathan/tinify-url/status.png)](https://drone.io/github.com/Peramanathan/tinify-url/latest)
+
 ### Tasks and Requirements
 The assignment is to use Python and a web framework to create a URL shortener similar to `http://bit.ly​`, but with a different URL encoding scheme. The shortened URLs will have the form `http://myurlshortener.com/​<word>/` where 
 `<word>`` is a word from the english language. 
